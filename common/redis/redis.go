@@ -29,6 +29,8 @@ type appRedis struct {
 	service     string
 }
 
+var _ IRedisCache = (*appRedis)(nil)
+
 func NewRedisCache(config Config) (*appRedis, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     config.Addr,
