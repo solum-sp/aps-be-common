@@ -8,156 +8,198 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func createTempEnvFile(t *testing.T, filename string, content string, env string) string {
+// Test configuration struct
+type TestConfig struct {
+	App struct {
+		Name    string `env:"APP_NAME" envDefault:"test-app"`
+		Version string `env:"APP_VERSION" envDefault:"v1.0.0"`
+		Env     string `env:"APP_ENV" envDefault:"development"`
+	}
+	Database struct {
+		URI      string `env:"DB_URI" envDefault:"postgresql://localhost:5432/testdb"`
+		Username string `env:"DB_USERNAME" envDefault:"test"`
+		Password string `env:"DB_PASSWORD"`
+	}
+	Custom struct {
+		Feature string `env:"CUSTOM_FEATURE" envDefault:"test-feature"`
+		Flag    bool   `env:"CUSTOM_FLAG" envDefault:"true"`
+	}
+}
+
+func createTempEnvFile(t *testing.T, filename string, content string) string {
 	dir := t.TempDir()
 	envPath := filepath.Join(dir, filename)
-	err := os.Setenv("APP_ENV", env)
-	assert.NoError(t, err)
-	err = os.WriteFile(envPath, []byte(content), 0644)
-
+	err := os.WriteFile(envPath, []byte(content), 0644)
 	assert.NoError(t, err)
 	return dir
 }
 
-func TestNewAppConfig(t *testing.T) {
-	tt := struct {
-		name        string
-		envContent  string
-		envFile     string
-		expectError bool
-		env         string
-		validate    func(*testing.T, *AppConfig)
-	}{
-		name: "Valid development config",
-		envContent: `
-							APP_NAME=test-app
-							APP_VERSION=v1.0.0
-							APP_ENV=development
-							COCKROACH_URI=postgresql://root@localhost:26257/defaultdb
-							MONGO_URI=mongodb://localhost:27017
-					`,
-		envFile:     ".env",
-		expectError: false,
-		env:         "development",
-		validate: func(t *testing.T, cfg *AppConfig) {
-			assert.Equal(t, "test-app", cfg.App.Name)
-			assert.Equal(t, "v1.0.0", cfg.App.Version)
-			assert.Equal(t, "development", cfg.App.Env)
-		},
-	}
-
-	t.Run(tt.name, func(t *testing.T) {
-		// Create temporary environment file
-		tmpDir := createTempEnvFile(t, tt.envFile, tt.envContent, tt.env)
-
-		// Test configuration loading
-		cfg, err := NewAppConfig(tmpDir)
-
-		if tt.expectError {
-			assert.Error(t, err)
-			return
-		}
-
-		assert.NoError(t, err)
-		assert.NotNil(t, cfg)
-
-		if tt.validate != nil {
-			tt.validate(t, cfg)
-		}
-	})
-}
-
-func TestNewAppConfigProduction(t *testing.T) {
-	tt := struct {
-		name        string
-		envContent  string
-		envFile     string
-		expectError bool
-		env         string
-		validate    func(*testing.T, *AppConfig)
-	}{
-		name: "Valid production config",
-		envContent: `
-							APP_NAME=test-app
-							APP_VERSION=v1.0.0
-							APP_ENV=production
-							COCKROACH_URI=postgresql://root@localhost:26257/defaultdb
-							MONGO_URI=mongodb://localhost:27017
-					`,
-		envFile:     ".env.production",
-		expectError: false,
-		env:         "production",
-		validate: func(t *testing.T, cfg *AppConfig) {
-			assert.Equal(t, "test-app", cfg.App.Name)
-			assert.Equal(t, "v1.0.0", cfg.App.Version)
-			assert.Equal(t, "production", cfg.App.Env)
-		},
-	}
-
-	t.Run(tt.name, func(t *testing.T) {
-		// Create temporary environment file
-		tmpDir := createTempEnvFile(t, tt.envFile, tt.envContent, tt.env)
-
-		// Test configuration loading
-		cfg, err := NewAppConfig(tmpDir)
-
-		if tt.expectError {
-			assert.Error(t, err)
-			return
-		}
-
-		assert.NoError(t, err)
-		assert.NotNil(t, cfg)
-
-		if tt.validate != nil {
-			tt.validate(t, cfg)
-		}
-	})
-}
-
-func TestParseConfig(t *testing.T) {
+func TestLoadEnv(t *testing.T) {
 	tests := []struct {
-		name        string
-		envVars     map[string]string
-		expectError bool
+		name       string
+		env        string
+		envContent string
+		envFile    string
+		wantErr    bool
 	}{
 		{
-			name: "Valid configuration",
-			envVars: map[string]string{
-				"APP_NAME":      "test-app",
-				"COCKROACH_URI": "postgresql://root@localhost:26257/defaultdb",
-				"MONGO_URI":     "mongodb://localhost:27017",
-			},
-			expectError: false,
+			name: "Development environment",
+			env:  "development",
+			envContent: `
+APP_NAME=dev-app
+APP_VERSION=v1.0.0
+DB_URI=postgresql://localhost:5432/devdb
+`,
+			envFile: ".env",
+			wantErr: false,
 		},
 		{
-			name: "Missing required fields",
-			envVars: map[string]string{
-				"APP_NAME": "test-app",
-			},
-			expectError: true,
+			name: "Production environment",
+			env:  "production",
+			envContent: `
+APP_NAME=prod-app
+APP_VERSION=v2.0.0
+DB_URI=postgresql://prod-host:5432/proddb
+`,
+			envFile: ".env.production",
+			wantErr: false,
+		},
+		{
+			name: "Test environment",
+			env:  "test",
+			envContent: `
+APP_NAME=test-app
+APP_VERSION=v0.0.1
+DB_URI=postgresql://localhost:5432/testdb
+`,
+			envFile: ".env.test",
+			wantErr: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Set environment variables
-			for k, v := range tt.envVars {
-				os.Setenv(k, v)
-			}
+			// Setup
+			tmpDir := createTempEnvFile(t, tt.envFile, tt.envContent)
+			os.Setenv("APP_ENV", tt.env)
+			defer os.Unsetenv("APP_ENV")
 
-			cfg := &AppConfig{}
-			err := ParseConfig(cfg)
+			// Test
+			err := LoadEnv(tmpDir)
 
-			if tt.expectError {
+			// Assert
+			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
+		})
+	}
+}
 
-			// Clean up environment variables
-			for k := range tt.envVars {
-				os.Unsetenv(k)
+func TestParseConfig(t *testing.T) {
+	tests := []struct {
+		name       string
+		envContent string
+		validate   func(*testing.T, *TestConfig)
+		wantErr    bool
+	}{
+		{
+			name: "Parse with all values set",
+			envContent: `
+APP_NAME=custom-app
+APP_VERSION=v3.0.0
+DB_URI=postgresql://custom:5432/customdb
+DB_USERNAME=custom-user
+DB_PASSWORD=secret
+CUSTOM_FEATURE=special
+CUSTOM_FLAG=true
+`,
+			validate: func(t *testing.T, cfg *TestConfig) {
+				assert.Equal(t, "custom-app", cfg.App.Name)
+				assert.Equal(t, "v3.0.0", cfg.App.Version)
+				assert.Equal(t, "postgresql://custom:5432/customdb", cfg.Database.URI)
+				assert.Equal(t, "custom-user", cfg.Database.Username)
+				assert.Equal(t, "secret", cfg.Database.Password)
+				assert.Equal(t, "special", cfg.Custom.Feature)
+				assert.True(t, cfg.Custom.Flag)
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup
+			if tt.envContent != "" {
+				tmpDir := createTempEnvFile(t, ".env", tt.envContent)
+				err := LoadEnv(tmpDir)
+				assert.NoError(t, err)
+			}
+
+			// Test
+			cfg := &TestConfig{}
+			err := ParseConfig(cfg)
+
+			// Assert
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			if tt.validate != nil {
+				tt.validate(t, cfg)
+			}
+		})
+	}
+}
+
+func TestNewAppConfig(t *testing.T) {
+	tests := []struct {
+		name       string
+		envContent string
+		validate   func(*testing.T, *TestConfig)
+		wantErr    bool
+	}{
+		{
+			name: "Create new config with custom values",
+			envContent: `
+APP_NAME=new-app
+APP_VERSION=v4.0.0
+DB_URI=postgresql://new:5432/newdb
+CUSTOM_FEATURE=new-feature
+`,
+			validate: func(t *testing.T, cfg *TestConfig) {
+				assert.Equal(t, "new-app", cfg.App.Name)
+				assert.Equal(t, "v4.0.0", cfg.App.Version)
+				assert.Equal(t, "postgresql://new:5432/newdb", cfg.Database.URI)
+				assert.Equal(t, "new-feature", cfg.Custom.Feature)
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup
+			tmpDir := createTempEnvFile(t, ".env", tt.envContent)
+
+			// Test
+			cfg := &TestConfig{}
+			result, err := NewAppConfig(tmpDir, cfg)
+
+			// Assert
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.NotNil(t, result)
+
+			resultCfg, ok := result.(*TestConfig)
+			assert.True(t, ok)
+			if tt.validate != nil {
+				tt.validate(t, resultCfg)
 			}
 		})
 	}

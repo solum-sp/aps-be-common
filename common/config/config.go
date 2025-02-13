@@ -8,40 +8,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
-type AppConfig struct {
-	App struct {
-		Name    string `env:"APP_NAME" envDefault:"microservice-base"`
-		Version string `env:"APP_VERSION" envDefault:"v0.0.0"`
-		Env     string `env:"APP_ENV" envDefault:"development"`
-	}
-	Server struct {
-		Port string `env:"HTTP_PORT" envDefault:"8080"`
-		Host string `env:"HTTP_HOST" envDefault:"localhost"`
-	}
-
-	Logger struct {
-		Level string `env:"LOG_LEVEL" envDefault:"info"`
-	}
-
-	CockroachDB struct {
-		URI string `env:"COCKROACH_URI,required"`
-	}
-
-	MongoDB struct {
-		URI      string `env:"MONGO_URI,required"`
-		Database string `env:"MONGO_DATABASE" envDefault:"defaultdb"`
-	}
-
-	Redis struct {
-		Addr     string `env:"REDIS_HOST" envDefault:"localhost:6379"`
-		Password string `env:"REDIS_PASSWORD" envDefault:""`
-		DB       int    `env:"REDIS_DB" envDefault:"0"`
-	}
-}
-
-func NewAppConfig(path string) (*AppConfig, error) {
-	cfg := &AppConfig{}
-	err := loadEnv(path)
+func NewAppConfig(path string, cfg interface{}) (interface{}, error) {
+	err := LoadEnv(path)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +20,7 @@ func NewAppConfig(path string) (*AppConfig, error) {
 	return cfg, nil
 }
 
-func loadEnv(path string) error {
+func LoadEnv(path string) error {
 	env := os.Getenv("APP_ENV")
 	if env == "" {
 		env = "development"
@@ -79,6 +47,6 @@ func loadEnv(path string) error {
 	return nil
 }
 
-func ParseConfig(c *AppConfig) error {
+func ParseConfig(c interface{}) error {
 	return env.Parse(c)
 }

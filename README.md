@@ -20,6 +20,60 @@ The common packages are organized in the `common` directory and include:
 - Automatic loading of `.env`, `.env.test`, and `.env.production` files
 - Structured configuration using `AppConfig` with support for various service settings
 
+1. Define your configuration struct with environment variable tags:
+
+    ```go
+    // Load the configuration
+    cfg := &MyConfig{}
+    config, err := config.NewAppConfig("./config", cfg)
+    if err != nil {
+        log.Fatal(err)
+    }
+    myConfig := config.(*MyConfig)
+    ```
+
+    Example `.env` file:
+    ```env
+    APP_NAME=microservice-base
+    APP_ENV=development
+    APP_VERSION=0.0.1
+
+    HTTP_PORT=8000
+    HTTP_HOST=localhost
+
+    COCKROACH_URI=postgresql://root@localhost:26257/defaultdb?sslmode=disable
+
+    MONGO_URI=mongodb://localhost:27017
+    MONGO_DB=defaultdb
+
+    REDIS_HOST=localhost:6379
+    REDIS_PASSWORD=
+    REDIS_DB=0
+    ``` 
+
+    #### Error Handling
+
+    The configuration loader will return an error if:
+    - A required field is missing
+    - Environment file cannot be read
+    - Type conversion fails
+
+    Example error handling:
+    ```go
+    cfg := &MyConfig{}
+    config, err := config.NewAppConfig("./config", cfg)
+    if err != nil {
+        switch {
+        case strings.Contains(err.Error(), "required"):
+            log.Fatal("Missing required configuration")
+        case strings.Contains(err.Error(), "failed to load env"):
+            log.Fatal("Failed to load environment file")
+        default:
+            log.Fatal("Configuration error:", err)
+        }
+    }
+    ```
+
 ### Kafka Package
 - Full Kafka producer and consumer implementations
 - Support for Schema Registry with Avro serialization
@@ -49,26 +103,6 @@ The common packages are organized in the `common` directory and include:
 - Shared types and constants
 - Error handling utilities
 - Helper functions for common operations
-
-## Configuration
-
-### Redis Configuration
-```go
-redisConfig := redis.Config{
-    Addr:     "localhost:6379",
-    Password: "",
-    DB:       0,
-    Service:  "your-service-name",
-}
-```
-
-### Logger Configuration
-```go
-loggerConfig := logger.Config{
-    Service: "your-service-name",
-    Level:   logger.InfoLv,
-}
-```
 
 ## Requirements
 
