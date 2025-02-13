@@ -19,9 +19,8 @@ The common packages are organized in the `common` directory and include:
 - Supports development, test, and production environments
 - Automatic loading of `.env`, `.env.test`, and `.env.production` files
 - Structured configuration using `AppConfig` with support for various service settings
-
-1. Define your configuration struct with environment variable tags:
-
+- Define your configuration struct with environment variable tags:
+    #### Basic usage
     ```go
     // Load the configuration
     cfg := &MyConfig{}
@@ -81,6 +80,46 @@ The common packages are organized in the `common` directory and include:
 - Robust error handling and retry mechanisms
 - Supports both synchronous and asynchronous message processing
 - Built-in admin client functionality
+    #### Basic usage
+    ```go
+    // create a new schema registry
+    sr, err := kafka.NewSchemaRegistry(
+        kafka.WithSchemaRegistryURL("http://localhost:8081"),
+    )
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    /// Create a new Kafka producer
+    producer, err := kafka.NewKafkaProducer(kafka.WithBrokers("localhost:9092"), kafka.WithClientID("my-client"))
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    publisher, err := kafka.NewKafkaPublisher(producer, sr, 1, "my-topic")
+    if err != nil {
+        log.Fatal(err)
+    }
+    publisher.SendMessage(context.Background(), "hello")
+
+    /// Create a new Kafka consumer
+    consumer, err := service.NewKafkaConsumer(
+        kafka.WithBrokers("custom-addr-of-broker"), //default addr == 'localhost:9092'
+        kafka.WithClientID("custom-client-id"),
+    )
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    subscriber, err := kafka.NewKafkaSubscriber(consumer, sr,1, "my-topic")
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    subscriber.ConsumeMessages(context.Background(), func() kafka.ConsumerMessage {
+		...
+	})
+    ```
 
 ### Logger Package
 - Structured logging with multiple log levels (Debug, Info, Warn, Error, Fatal)
@@ -90,6 +129,18 @@ The common packages are organized in the `common` directory and include:
 - Stack trace capture for error logging
 - Service name tagging for multi-service environments
 
+    #### Basic usage
+    ```go
+    // Create a new logger
+    logger := logger.NewLogger(logger.Config{
+        Service: "my-service",
+        Level:   logger.InfoLv,
+    })
+
+    // Log a message
+    logger.Info(context.Background(), "Hello, World!")
+    ```
+    
 ### Redis Package
 - Redis client implementation with connection pooling
 - Support for key-value operations with expiration time
@@ -97,6 +148,26 @@ The common packages are organized in the `common` directory and include:
 - Service-specific key prefixing
 - Bulk operations support (clear all, clear by pattern)
 - Error handling and connection management
+
+    #### Basic usage
+    ```go
+    // Create a new Redis client
+    redisClient, err := redis.NewRedisCache(redis.Config{
+        Addr:     "localhost:6379",
+        Password: "",
+        DB:       0,
+        Service:  "my-service",
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Set a key-value pair
+    err = redisClient.Set(context.Background(), "key", "value", 0)
+    if err != nil {
+        log.Fatal(err)
+    }
+    ```
 
 ### Utils Package
 - Common utility functions and helpers

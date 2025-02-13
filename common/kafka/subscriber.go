@@ -40,7 +40,6 @@ func (s *kafkaSubscriber) SubscribeToTopic(ctx context.Context) error {
 
 func (s *kafkaSubscriber) ConsumeMessages(
 	ctx context.Context,
-
 	msgTypeConstructor func() ConsumerMessage,
 ) (<-chan ConsumerMessage, <-chan error, chan<- bool) {
 	chMsg := make(chan ConsumerMessage)
