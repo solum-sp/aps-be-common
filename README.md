@@ -175,6 +175,31 @@ The common packages are organized in the `common` directory and include:
 - Error handling utilities
 - Helper functions for common operations
 
+## Changelog
+
+### [2.0.0] - 2025-02-13
+
+#### Changed
+- **Cache Interface**: Migrated from Redis-specific implementation to a more generic cache interface
+  - Improved abstraction layer for caching operations
+  - Added support for multiple cache backend implementations
+  - Simplified cache configuration and initialization
+
+- **Event System**: Transitioned from Kafka to a generic event interface
+  - Introduced abstract event publisher and subscriber interfaces
+  - Decoupled event handling from specific message broker implementations
+  - Enhanced event system configuration flexibility
+
+- **Logger Interface**: Updated logging interface for better consistency
+  - Standardized logging methods and levels
+  - Added structured logging support
+  - Improved context handling in log entries
+
+#### Migration Guide
+- For cache operations, update imports from `redis` package to `cache` package
+- Replace Kafka-specific implementations with new event interface methods
+- Update logger calls to use the new standardized logging interface
+
 ## Requirements
 
 - Go 1.22 or higher

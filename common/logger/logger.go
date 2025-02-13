@@ -23,17 +23,15 @@ type Config struct {
 
 func NewLogger(config Config) (*zapLogger, error) {
 	encoderConfig := zapcore.EncoderConfig{
-		TimeKey:        "timestamp",
+		TimeKey:        "time",
 		LevelKey:       "level",
-		NameKey:        "logger",
-		CallerKey:      "caller",
 		MessageKey:     "msg",
+		CallerKey:      "caller",
 		StacktraceKey:  "stacktrace",
-		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeTime:     zapcore.ISO8601TimeEncoder,
-		EncodeDuration: zapcore.SecondsDurationEncoder,
-		EncodeCaller:   zapcore.ShortCallerEncoder,
+		EncodeTime:     zapcore.ISO8601TimeEncoder,       // Human-readable time format
+		EncodeLevel:    zapcore.CapitalColorLevelEncoder, // Color for levels
+		EncodeCaller:   zapcore.ShortCallerEncoder,       // Shorten caller file path
+		EncodeDuration: zapcore.StringDurationEncoder,    // Human-readable duration
 	}
 
 	encoder := zapcore.NewJSONEncoder(encoderConfig)
@@ -159,10 +157,20 @@ func sanitize(value interface{}) interface{} {
 	return value
 }
 
+// Helper to convert variadic fields to Zap fields
 func toZapFields(fields ...interface{}) []zap.Field {
-	zapFields := make([]zap.Field, len(fields))
-	for i, field := range fields {
-		zapFields[i] = zap.Any(fmt.Sprintf("field_%d", i), field) // Dynamically assign field names
+	zapFields := make([]zap.Field, 0, len(fields)/2)
+	if len(fields)%2 != 0 {
+		// Log a warning if there is an odd number of parameters
+		zapFields = append(zapFields, zap.String("error", "invalid key-value format: missing value for last key"))
+		return zapFields
+	}
+	for i := 0; i < len(fields); i += 2 {
+		key, ok := fields[i].(string)
+		if !ok {
+			key = fmt.Sprintf("field_%d", i) // Default key if not a string
+		}
+		zapFields = append(zapFields, zap.Any(key, fields[i+1]))
 	}
 	return zapFields
 }
