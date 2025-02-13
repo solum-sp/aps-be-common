@@ -73,7 +73,7 @@ The common packages are organized in the `common` directory and include:
     }
     ```
 
-### Kafka Package
+### Event Package
 - Full Kafka producer and consumer implementations
 - Support for Schema Registry with Avro serialization
 - Configurable consumer groups and auto-commit settings
@@ -83,40 +83,40 @@ The common packages are organized in the `common` directory and include:
     #### Basic usage
     ```go
     // create a new schema registry
-    sr, err := kafka.NewSchemaRegistry(
-        kafka.WithSchemaRegistryURL("http://localhost:8081"),
+    sr, err := event.NewSchemaRegistry(
+        event.WithKafkaSchemaRegistryURL("http://localhost:8081"),
     )
     if err != nil {
         log.Fatal(err)
     }
 
     /// Create a new Kafka producer
-    producer, err := kafka.NewKafkaProducer(kafka.WithBrokers("localhost:9092"), kafka.WithClientID("my-client"))
+    producer, err := event.NewKafkaProducer(event.WithKafkaBrokers("localhost:9092"), event.WithKafkaClientID("my-client"))
     if err != nil {
         log.Fatal(err)
     }
 
-    publisher, err := kafka.NewKafkaPublisher(producer, sr, 1, "my-topic")
+    publisher, err := event.NewKafkaPublisher(producer, sr, 1, "my-topic")
     if err != nil {
         log.Fatal(err)
     }
     publisher.SendMessage(context.Background(), "hello")
 
     /// Create a new Kafka consumer
-    consumer, err := service.NewKafkaConsumer(
-        kafka.WithBrokers("custom-addr-of-broker"), //default addr == 'localhost:9092'
-        kafka.WithClientID("custom-client-id"),
+    consumer, err := event.NewKafkaConsumer(
+        event.WithKafkaBrokers("custom-addr-of-broker"), //default addr == 'localhost:9092'
+        event.WithKafkaClientID("custom-client-id"),
     )
     if err != nil {
         log.Fatal(err)
     }
 
-    subscriber, err := kafka.NewKafkaSubscriber(consumer, sr,1, "my-topic")
+    subscriber, err := event.NewKafkaSubscriber(consumer, sr,1, "my-topic")
     if err != nil {
         log.Fatal(err)
     }
 
-    subscriber.ConsumeMessages(context.Background(), func() kafka.ConsumerMessage {
+    subscriber.ConsumeMessages(context.Background(), func() event.ConsumerMessage {
 		...
 	})
     ```
@@ -141,7 +141,7 @@ The common packages are organized in the `common` directory and include:
     logger.Info(context.Background(), "Hello, World!")
     ```
     
-### Redis Package
+### Cache Package
 - Redis client implementation with connection pooling
 - Support for key-value operations with expiration time
 - Pattern-based key operations (get, delete)
@@ -152,7 +152,7 @@ The common packages are organized in the `common` directory and include:
     #### Basic usage
     ```go
     // Create a new Redis client
-    redisClient, err := redis.NewRedisCache(redis.Config{
+    redisClient, err := cache.NewRedisCache(cache.RedisConfig{
         Addr:     "localhost:6379",
         Password: "",
         DB:       0,

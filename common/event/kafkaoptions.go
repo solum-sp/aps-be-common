@@ -1,4 +1,4 @@
-package kafka
+package event
 
 // KafkaProducerConfig holds Kafka producer settings
 type KafkaProducerConfig struct {
@@ -53,87 +53,87 @@ var DefaultConfig = struct {
 }
 
 // Option is a functional option for configuring Kafka
-type Option func(*KafkaProducerConfig, *KafkaConsumerConfig, *SchemaRegistryConfig)
+type KafkaOption func(*KafkaProducerConfig, *KafkaConsumerConfig, *SchemaRegistryConfig)
 
 // WithBrokers sets Kafka brokers
-func WithBrokers(brokers string) Option {
+func WithKafkaBrokers(brokers string) KafkaOption {
 	return func(p *KafkaProducerConfig, c *KafkaConsumerConfig, _ *SchemaRegistryConfig) {
 		p.Brokers = brokers
 		c.Brokers = brokers
 	}
 }
 
-// WithClientID sets Kafka client ID for producer
-func WithClientID(clientID string) Option {
+// WithKafkaClientID sets Kafka client ID for producer
+func WithKafkaClientID(clientID string) KafkaOption {
 	return func(p *KafkaProducerConfig, _ *KafkaConsumerConfig, _ *SchemaRegistryConfig) {
 		p.ClientID = clientID
 	}
 }
 
-// WithConsumerGroupID sets Kafka consumer group ID
-func WithConsumerGroupID(groupID string) Option {
+// WithKafkaConsumerGroupID sets Kafka consumer group ID
+func WithKafkaConsumerGroupID(groupID string) KafkaOption {
 	return func(_ *KafkaProducerConfig, c *KafkaConsumerConfig, _ *SchemaRegistryConfig) {
 		c.GroupID = groupID
 	}
 }
 
-// WithSchemaRegistryURL sets the schema registry URL
-func WithSchemaRegistryURL(url string) Option {
+// WithKafkaSchemaRegistryURL sets the schema registry URL
+func WithKafkaSchemaRegistryURL(url string) KafkaOption {
 	return func(_ *KafkaProducerConfig, _ *KafkaConsumerConfig, s *SchemaRegistryConfig) {
 		s.URL = url
 	}
 }
 
-// WithAutoOffsetReset sets the auto offset reset policy
-func WithAutoOffsetReset(offset string) Option {
+// WithKafkaAutoOffsetReset sets the auto offset reset policy
+func WithKafkaAutoOffsetReset(offset string) KafkaOption {
 	return func(_ *KafkaProducerConfig, c *KafkaConsumerConfig, _ *SchemaRegistryConfig) {
 		c.AutoOffsetReset = offset
 	}
 }
 
-func WithEnableAutoCommit(enable bool) Option {
+func WithKafkaEnableAutoCommit(enable bool) KafkaOption {
 	return func(_ *KafkaProducerConfig, c *KafkaConsumerConfig, _ *SchemaRegistryConfig) {
 		c.EnableAutoCommit = enable
 	}
 }
 
-// WithMaxPollIntervalMs sets the max poll interval
-func WithMaxPollIntervalMs(ms int) Option {
+// WithKafkaMaxPollIntervalMs sets the max poll interval
+func WithKafkaMaxPollIntervalMs(ms int) KafkaOption {
 	return func(_ *KafkaProducerConfig, c *KafkaConsumerConfig, _ *SchemaRegistryConfig) {
 		c.MaxPollIntervalMs = ms
 	}
 }
 
-// WithSessionTimeoutMs sets the session timeout
-func WithSessionTimeoutMs(ms int) Option {
+// WithKafkaSessionTimeoutMs sets the session timeout
+func WithKafkaSessionTimeoutMs(ms int) KafkaOption {
 	return func(_ *KafkaProducerConfig, c *KafkaConsumerConfig, _ *SchemaRegistryConfig) {
 		c.SessionTimeoutMs = ms
 	}
 }
 
-// WithHeartbeatIntervalMs sets the heartbeat interval
-func WithHeartbeatIntervalMs(ms int) Option {
+// WithKafkaHeartbeatIntervalMs sets the heartbeat interval
+func WithKafkaHeartbeatIntervalMs(ms int) KafkaOption {
 	return func(_ *KafkaProducerConfig, c *KafkaConsumerConfig, _ *SchemaRegistryConfig) {
 		c.HeartbeatIntervalMs = ms
 	}
 }
 
-// WithRetryBackoffMs sets the retry backoff time
-func WithRetryBackoffMs(ms int) Option {
+// WithKafkaRetryBackoffMs sets the retry backoff time
+func WithKafkaRetryBackoffMs(ms int) KafkaOption {
 	return func(_ *KafkaProducerConfig, c *KafkaConsumerConfig, _ *SchemaRegistryConfig) {
 		c.RetryBackoffMs = ms
 	}
 }
 
-// WithFetchMinBytes sets the fetch minimum bytes
-func WithFetchMinBytes(bytes int) Option {
+// WithKafkaFetchMinBytes sets the fetch minimum bytes
+func WithKafkaFetchMinBytes(bytes int) KafkaOption {
 	return func(_ *KafkaProducerConfig, c *KafkaConsumerConfig, _ *SchemaRegistryConfig) {
 		c.FetchMinBytes = bytes
 	}
 }
 
-// WithFetchWaitMaxMs sets the fetch wait max time
-func WithFetchWaitMaxMs(ms int) Option {
+// WithKafkaFetchWaitMaxMs sets the fetch wait max time
+func WithKafkaFetchWaitMaxMs(ms int) KafkaOption {
 	return func(_ *KafkaProducerConfig, c *KafkaConsumerConfig, _ *SchemaRegistryConfig) {
 		c.FetchWaitMaxMs = ms
 	}

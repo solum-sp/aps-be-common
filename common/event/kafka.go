@@ -1,4 +1,4 @@
-package kafka
+package event
 
 import (
 	"context"
@@ -10,18 +10,6 @@ import (
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/solum-sp/aps-be-common/common/utils"
 )
-
-type IPublisher interface {
-	SendMessage(ctx context.Context, value interface{}) error
-}
-
-type ISubscriber interface {
-	SubscribeToTopic(ctx context.Context) error
-	ConsumeMessages(ctx context.Context, msgTypeConf func() ConsumerMessage) (chMsg <-chan ConsumerMessage, chErr <-chan error, chCommitRequest chan<- bool)
-}
-type ConsumerMessage interface {
-	EventName() string
-}
 
 func CreateTopicIfNotExist(adminClient *kafka.AdminClient, topicName string, numPartitions int, replicationFactor int) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)

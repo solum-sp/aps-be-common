@@ -1,4 +1,4 @@
-package kafka
+package event
 
 import (
 	"testing"
@@ -19,11 +19,11 @@ func TestKafkaProducerOptions(t *testing.T) {
 	consumerConfig := DefaultConfig.Consumer
 	schemaConfig := DefaultConfig.Schema
 
-	opts := []Option{
-		WithBrokers("kafka:9092"),
-		WithClientID("test-client"),
-		WithConsumerGroupID("test-group"),
-		WithSchemaRegistryURL("http://schema-registry:8081"),
+	opts := []KafkaOption{
+		WithKafkaBrokers("kafka:9092"),
+		WithKafkaClientID("test-client"),
+		WithKafkaConsumerGroupID("test-group"),
+		WithKafkaSchemaRegistryURL("http://schema-registry:8081"),
 	}
 
 	for _, opt := range opts {
@@ -48,11 +48,11 @@ func TestKafkaConsumerOptions(t *testing.T) {
 	consumerConfig := DefaultConfig.Consumer
 	schemaConfig := DefaultConfig.Schema
 
-	opts := []Option{
-		WithBrokers("kafka:9092"),
-		WithClientID("test-client"),
-		WithConsumerGroupID("test-group"),
-		WithSchemaRegistryURL("http://schema-registry:8081"),
+	opts := []KafkaOption{
+		WithKafkaBrokers("kafka:9092"),
+		WithKafkaClientID("test-client"),
+		WithKafkaConsumerGroupID("test-group"),
+		WithKafkaSchemaRegistryURL("http://schema-registry:8081"),
 	}
 
 	for _, opt := range opts {

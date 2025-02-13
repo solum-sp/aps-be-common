@@ -1,4 +1,4 @@
-package kafka
+package event
 
 import (
 	"context"
@@ -109,7 +109,7 @@ consumer, err := service.NewKafkaConsumer(
 )
 */
 
-func NewKafkaConsumer(opts ...Option) (*kafka.Consumer, error) {
+func NewKafkaConsumer(opts ...KafkaOption) (*kafka.Consumer, error) {
 	producerConfig := DefaultConfig.Producer
 	consumerConfig := DefaultConfig.Consumer
 	schemaConfig := DefaultConfig.Schema

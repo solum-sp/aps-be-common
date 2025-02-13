@@ -1,4 +1,4 @@
-package redis
+package cache
 
 import (
 	"testing"
@@ -9,14 +9,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func setupTestRedis(t *testing.T) (*appRedis, func()) {
+func setupTestRedis(t *testing.T) (*cacheRedis, func()) {
 	// Start a miniredis server
 	mredis := miniredis.RunT(t)
 	client := redis.NewClient(&redis.Options{
 		Addr: mredis.Addr(),
 	})
 
-	cache := &appRedis{
+	cache := &cacheRedis{
 		redisClient: client,
 		service:     "test-service",
 	}

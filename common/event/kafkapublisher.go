@@ -1,4 +1,4 @@
-package kafka
+package event
 
 import (
 	"context"
@@ -61,7 +61,7 @@ func (s *kafkaPublisher) SendMessage(ctx context.Context, value interface{}) err
 	return nil
 }
 
-func NewKafkaProducer(opts ...Option) (*kafka.Producer, error) {
+func NewKafkaProducer(opts ...KafkaOption) (*kafka.Producer, error) {
 	producerConfig := DefaultConfig.Producer
 	consumerConfig := DefaultConfig.Consumer
 	schemaConfig := DefaultConfig.Schema

@@ -1,4 +1,4 @@
-package kafka
+package event
 
 import (
 	"embed"
@@ -22,7 +22,7 @@ type SchemaRegistry struct {
 	client schemaregistry.Client
 }
 
-func NewSchemaRegistry(opts ...Option) (*SchemaRegistry, error) {
+func NewSchemaRegistry(opts ...KafkaOption) (*SchemaRegistry, error) {
 
 	producerConfig := DefaultConfig.Producer
 	consumerConfig := DefaultConfig.Consumer
