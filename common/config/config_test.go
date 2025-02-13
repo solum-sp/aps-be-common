@@ -186,7 +186,7 @@ CUSTOM_FEATURE=new-feature
 
 			// Test
 			cfg := &TestConfig{}
-			result, err := NewAppConfig(tmpDir, cfg)
+			err := NewAppConfig(tmpDir, cfg)
 
 			// Assert
 			if tt.wantErr {
@@ -194,12 +194,10 @@ CUSTOM_FEATURE=new-feature
 				return
 			}
 			assert.NoError(t, err)
-			assert.NotNil(t, result)
+			assert.NotNil(t, cfg)
 
-			resultCfg, ok := result.(*TestConfig)
-			assert.True(t, ok)
 			if tt.validate != nil {
-				tt.validate(t, resultCfg)
+				tt.validate(t, cfg)
 			}
 		})
 	}

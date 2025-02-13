@@ -8,16 +8,16 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func NewAppConfig(path string, cfg interface{}) (interface{}, error) {
+func NewAppConfig(path string, cfg interface{}) error {
 	err := LoadEnv(path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	err = ParseConfig(cfg)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return cfg, nil
+	return nil
 }
 
 func LoadEnv(path string) error {
