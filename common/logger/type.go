@@ -1,7 +1,5 @@
 package logger
 
-import "context"
-
 type Level string
 
 const (
@@ -12,12 +10,12 @@ const (
 )
 
 type ILogger interface {
-	Debug(ctx context.Context, msg string, fields ...Field)
-	Info(ctx context.Context, msg string, fields ...Field)
-	Warn(ctx context.Context, msg string, fields ...Field)
-	Error(ctx context.Context, msg string, fields ...Field)
-	Fatal(ctx context.Context, msg string, fields ...Field)
-	With(fields ...Field) ILogger
+	Debug(msg string, fields ...interface{})
+	Info(msg string, fields ...interface{})
+	Warn(msg string, fields ...interface{})
+	Error(msg string, fields ...interface{})
+	Fatal(msg string, fields ...interface{})
+	With(fields ...interface{}) ILogger
 }
 
 type Field struct {

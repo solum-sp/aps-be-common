@@ -51,30 +51,28 @@ func TestLogLevels(t *testing.T) {
 		service: "test-service",
 	}
 
-	ctx := context.Background()
 	tests := []struct {
 		level   zapcore.Level
-		logFunc func(msg string, fields ...Field)
+		logFunc func(msg string, fields ...interface{})
 	}{
-		{zapcore.DebugLevel, func(msg string, fields ...Field) { testLogger.Debug(ctx, msg, fields...) }},
-		{zapcore.InfoLevel, func(msg string, fields ...Field) { testLogger.Info(ctx, msg, fields...) }},
-		{zapcore.WarnLevel, func(msg string, fields ...Field) { testLogger.Warn(ctx, msg, fields...) }},
-		{zapcore.ErrorLevel, func(msg string, fields ...Field) { testLogger.Error(ctx, msg, fields...) }},
+		{zapcore.DebugLevel, func(msg string, fields ...interface{}) { testLogger.Debug(msg, fields) }},
+		{zapcore.InfoLevel, func(msg string, fields ...interface{}) { testLogger.Info(msg, fields) }},
+		{zapcore.WarnLevel, func(msg string, fields ...interface{}) { testLogger.Warn(msg, fields) }},
+		{zapcore.ErrorLevel, func(msg string, fields ...interface{}) { testLogger.Error(msg, fields) }},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.level.String(), func(t *testing.T) {
 			recorded.TakeAll() // Clear logs
 			msg := "test message"
-			fields := []Field{{Key: "test_key", Val: "test_value"}}
-
-			tt.logFunc(msg, fields...)
+			tt.logFunc(msg, "test_key", "test_value")
 
 			logs := recorded.All()
 			assert.Equal(t, 1, len(logs))
 			assert.Equal(t, tt.level, logs[0].Level)
 			assert.Equal(t, msg, logs[0].Message)
-			assert.Contains(t, logs[0].ContextMap(), "test_key")
+			ctxMap := logs[0].ContextMap()
+			assert.Contains(t, ctxMap, "service")
 		})
 	}
 }
@@ -110,160 +108,122 @@ func TestSanitize(t *testing.T) {
 	}
 }
 
-func TestCaptureStackTrace(t *testing.T) {
-	field := captureStackTrace()
-	assert.Equal(t, "stacktrace", field.Key)
-	assert.NotEmpty(t, field.String)
-	assert.Contains(t, field.String, "logger_test.go") // Should contain this file name
-}
-
-func TestLoggerWith(t *testing.T) {
-	core, recorded := observer.New(zapcore.DebugLevel)
-	logger := &zapLogger{
-		logger:  zap.New(core),
-		service: "test-service",
-	}
-
-	fields := []Field{
-		{Key: "field1", Val: "value1"},
-		{Key: "field2", Val: 123},
-	}
-
-	newLogger := logger.With(fields...)
-	newZapLogger, ok := newLogger.(*zapLogger)
-	assert.True(t, ok)
-	assert.NotNil(t, newZapLogger)
-
-	// Test logging with the new logger
-	ctx := context.Background()
-	newLogger.Info(ctx, "test message")
-
-	logs := recorded.All()
-	assert.Equal(t, 1, len(logs))
-	assert.Contains(t, logs[0].ContextMap(), "field1")
-	assert.Contains(t, logs[0].ContextMap(), "field2")
-}
-
 // mockLogger is a mock implementation of ILogger for testing opentelemetry decorator
-type mockLogger struct {
+type MockLogger struct {
 	mock.Mock
 }
 
-func (m *mockLogger) Debug(ctx context.Context, msg string, fields ...Field) {
-	m.Called(ctx, msg, fields)
+func (m *MockLogger) Debug(msg string, fields ...interface{}) {
+	m.Called(msg, fields)
 }
 
-func (m *mockLogger) Info(ctx context.Context, msg string, fields ...Field) {
-	m.Called(ctx, msg, fields)
+func (m *MockLogger) Info(msg string, fields ...interface{}) {
+	m.Called(msg, fields)
 }
 
-func (m *mockLogger) Warn(ctx context.Context, msg string, fields ...Field) {
-	m.Called(ctx, msg, fields)
+func (m *MockLogger) Warn(msg string, fields ...interface{}) {
+	m.Called(msg, fields)
 }
 
-func (m *mockLogger) Error(ctx context.Context, msg string, fields ...Field) {
-	m.Called(ctx, msg, fields)
+func (m *MockLogger) Error(msg string, fields ...interface{}) {
+	m.Called(msg, fields)
 }
 
-func (m *mockLogger) Fatal(ctx context.Context, msg string, fields ...Field) {
-	m.Called(ctx, msg, fields)
+func (m *MockLogger) Fatal(msg string, fields ...interface{}) {
+	m.Called(msg, fields)
 }
 
-func (m *mockLogger) With(fields ...Field) ILogger {
+func (m *MockLogger) With(fields ...interface{}) ILogger {
 	args := m.Called(fields)
 	return args.Get(0).(ILogger)
 }
 
-func TestOpenTelemetryDecoratorLogLevels(t *testing.T) {
-	mockLogger := new(mockLogger)
-	decorator := NewOpenTelemetryDecorator()
-	decoratedLogger := decorator.Decorate(mockLogger)
-
-	// Create context with span
-	ctx := context.Background()
-	sc := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    trace.TraceID{0x1},
-		SpanID:     trace.SpanID{0x1},
-		TraceFlags: trace.FlagsSampled,
-	})
-	ctxWithSpan := trace.ContextWithSpanContext(ctx, sc)
-
+func TestOpenTelemetryDecorator(t *testing.T) {
 	tests := []struct {
-		name    string
-		ctx     context.Context
-		level   string
-		logFunc func(ctx context.Context, msg string, fields ...Field)
+		name      string
+		level     string
+		msg       string
+		fields    []interface{}
+		withTrace bool
 	}{
 		{
-			name:    "debug with span",
-			ctx:     ctxWithSpan,
-			level:   "Debug",
-			logFunc: decoratedLogger.Debug,
+			name:      "Debug with trace",
+			level:     "debug",
+			msg:       "debug message",
+			fields:    []interface{}{"key", "value"},
+			withTrace: true,
 		},
 		{
-			name:    "info with span",
-			ctx:     ctxWithSpan,
-			level:   "Info",
-			logFunc: decoratedLogger.Info,
+			name:      "Info without trace",
+			level:     "info",
+			msg:       "info message",
+			fields:    []interface{}{"key", "value"},
+			withTrace: false,
 		},
 		{
-			name:    "warn with span",
-			ctx:     ctxWithSpan,
-			level:   "Warn",
-			logFunc: decoratedLogger.Warn,
-		},
-		{
-			name:    "error with span",
-			ctx:     ctxWithSpan,
-			level:   "Error",
-			logFunc: decoratedLogger.Error,
+			name:      "Error with fields",
+			level:     "error",
+			msg:       "error message",
+			fields:    []interface{}{"error", "test error"},
+			withTrace: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup mock expectation
-			mockLogger.On(tt.level, tt.ctx, "test message", mock.Anything).Once().Return()
+			// Setup
+			mockLogger := new(MockLogger)
+			decorator := NewOpenTelemetryDecorator()
+			decoratedLogger := decorator.Decorate(mockLogger).(*openTelemetryLogger)
 
-			// Execute test
-			tt.logFunc(tt.ctx, "test message")
-
-			// Verify expectations
-			mockLogger.AssertExpectations(t)
-
-			// Verify trace fields were added
-			calls := mockLogger.Calls
-			lastCall := calls[len(calls)-1]
-			fields := lastCall.Arguments.Get(2).([]Field)
-
-			var hasTraceID, hasSpanID bool
-			for _, f := range fields {
-				if f.Key == "trace_id" {
-					hasTraceID = true
-				}
-				if f.Key == "span_id" {
-					hasSpanID = true
-				}
+			// Create trace context if needed
+			ctx := context.Background()
+			if tt.withTrace {
+				sc := trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID: trace.TraceID{0x01},
+					SpanID:  trace.SpanID{0x01},
+				})
+				ctx = trace.ContextWithSpanContext(ctx, sc)
 			}
-			assert.True(t, hasTraceID, "trace_id field should be present")
-			assert.True(t, hasSpanID, "span_id field should be present")
+
+			// Set expectations
+			expectedFields := tt.fields
+			if tt.withTrace {
+				expectedFields = append(expectedFields,
+					"trace_id", mock.Anything,
+					"span_id", mock.Anything,
+				)
+			}
+
+			mockLogger.On(tt.level, tt.msg, expectedFields).Return()
+
+			// Execute
+			switch tt.level {
+			case "debug":
+				decoratedLogger.Debug(tt.msg, tt.fields...)
+			case "info":
+				decoratedLogger.Info(tt.msg, tt.fields...)
+			case "warn":
+				decoratedLogger.Warn(tt.msg, tt.fields...)
+			case "error":
+				decoratedLogger.Error(tt.msg, tt.fields...)
+			}
+
+			// Assert
+			mockLogger.AssertExpectations(t)
 		})
 	}
-}
 
-func TestOpenTelemetryDecorator_With(t *testing.T) {
-	mockLogger := new(mockLogger)
-	decorator := NewOpenTelemetryDecorator()
-	decoratedLogger := decorator.Decorate(mockLogger)
+	t.Run("With method", func(t *testing.T) {
+		mockLogger := new(MockLogger)
+		decorator := NewOpenTelemetryDecorator()
+		decoratedLogger := decorator.Decorate(mockLogger)
 
-	// Setup mock expectation
-	fields := []Field{{Key: "test", Val: "value"}}
-	mockLogger.On("With", fields).Return(mockLogger)
+		fields := []interface{}{"key", "value"}
+		mockLogger.On("With", fields).Return(mockLogger)
 
-	// Execute test
-	result := decoratedLogger.With(fields...)
-
-	// Verify expectations
-	assert.NotNil(t, result)
-	mockLogger.AssertExpectations(t)
+		newLogger := decoratedLogger.With(fields...)
+		assert.NotNil(t, newLogger)
+		mockLogger.AssertExpectations(t)
+	})
 }

@@ -22,53 +22,50 @@ type openTelemetryLogger struct {
 	logger ILogger
 }
 
-func (l *openTelemetryLogger) log(ctx context.Context, level string, msg string, fields ...Field) {
-	span := trace.SpanFromContext(ctx)
+func (l *openTelemetryLogger) log(level string, msg string, fields ...interface{}) {
+	span := trace.SpanFromContext(context.Background())
 	if span.SpanContext().IsValid() {
 		traceID := span.SpanContext().TraceID().String()
 		spanID := span.SpanContext().SpanID().String()
 
-		fields = append(fields,
-			Field{Key: "trace_id", Val: traceID},
-			Field{Key: "span_id", Val: spanID},
-		)
+		fields = append(fields, "trace_id", traceID, "span_id", spanID)
 	}
 
 	switch level {
 	case "debug":
-		l.logger.Debug(ctx, msg, fields...)
+		l.logger.Debug(msg, fields...)
 	case "info":
-		l.logger.Info(ctx, msg, fields...)
+		l.logger.Info(msg, fields...)
 	case "warn":
-		l.logger.Warn(ctx, msg, fields...)
+		l.logger.Warn(msg, fields...)
 	case "error":
-		l.logger.Error(ctx, msg, fields...)
+		l.logger.Error(msg, fields...)
 	case "fatal":
-		l.logger.Fatal(ctx, msg, fields...)
+		l.logger.Fatal(msg, fields...)
 	}
 }
 
-func (l *openTelemetryLogger) Debug(ctx context.Context, msg string, fields ...Field) {
-	l.log(ctx, "debug", msg, fields...)
+func (l *openTelemetryLogger) Debug(msg string, fields ...interface{}) {
+	l.log("debug", msg, fields...)
 }
 
-func (l *openTelemetryLogger) Info(ctx context.Context, msg string, fields ...Field) {
-	l.log(ctx, "info", msg, fields...)
+func (l *openTelemetryLogger) Info(msg string, fields ...interface{}) {
+	l.log("info", msg, fields...)
 }
 
-func (l *openTelemetryLogger) Warn(ctx context.Context, msg string, fields ...Field) {
-	l.log(ctx, "warn", msg, fields...)
+func (l *openTelemetryLogger) Warn(msg string, fields ...interface{}) {
+	l.log("warn", msg, fields...)
 }
 
-func (l *openTelemetryLogger) Error(ctx context.Context, msg string, fields ...Field) {
-	l.log(ctx, "error", msg, fields...)
+func (l *openTelemetryLogger) Error(msg string, fields ...interface{}) {
+	l.log("error", msg, fields...)
 }
 
-func (l *openTelemetryLogger) Fatal(ctx context.Context, msg string, fields ...Field) {
-	l.log(ctx, "fatal", msg, fields...)
+func (l *openTelemetryLogger) Fatal(msg string, fields ...interface{}) {
+	l.log("fatal", msg, fields...)
 }
 
-func (l *openTelemetryLogger) With(fields ...Field) ILogger {
+func (l *openTelemetryLogger) With(fields ...interface{}) ILogger {
 	return &openTelemetryLogger{
 		logger: l.logger.With(fields...),
 	}

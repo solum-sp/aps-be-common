@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -72,39 +71,35 @@ func NewLogger(config Config) (*zapLogger, error) {
 }
 
 // Methods implementing the Logger interface
-func (l *zapLogger) Debug(ctx context.Context, msg string, fields ...Field) {
-	l.log(ctx, zap.DebugLevel, msg, fields...)
+func (l *zapLogger) Debug(msg string, fields ...interface{}) {
+	l.log(zap.DebugLevel, msg, fields...)
 }
 
-func (l *zapLogger) Info(ctx context.Context, msg string, fields ...Field) {
-	l.log(ctx, zap.InfoLevel, msg, fields...)
+func (l *zapLogger) Info(msg string, fields ...interface{}) {
+	l.log(zap.InfoLevel, msg, fields...)
 }
 
-func (l *zapLogger) Warn(ctx context.Context, msg string, fields ...Field) {
-	l.log(ctx, zap.WarnLevel, msg, fields...)
+func (l *zapLogger) Warn(msg string, fields ...interface{}) {
+	l.log(zap.WarnLevel, msg, fields...)
 }
 
-func (l *zapLogger) Error(ctx context.Context, msg string, fields ...Field) {
-	l.log(ctx, zap.ErrorLevel, msg, fields...)
+func (l *zapLogger) Error(msg string, fields ...interface{}) {
+	l.log(zap.ErrorLevel, msg, fields...)
 }
 
-func (l *zapLogger) Fatal(ctx context.Context, msg string, fields ...Field) {
-	l.log(ctx, zap.FatalLevel, msg, fields...)
+func (l *zapLogger) Fatal(msg string, fields ...interface{}) {
+	l.log(zap.FatalLevel, msg, fields...)
 }
 
-func (l *zapLogger) With(fields ...Field) ILogger {
-	zapFields := make([]zap.Field, len(fields))
-	for i, f := range fields {
-		zapFields[i] = zap.Any(f.Key, sanitize(f.Val))
-	}
-
+func (l *zapLogger) With(fields ...interface{}) ILogger {
+	zapFields := toZapFields(fields...)
 	return &zapLogger{
 		logger:  l.logger.With(zapFields...),
 		service: l.service,
 	}
 }
 
-func (l *zapLogger) log(ctx context.Context, level zapcore.Level, msg string, fields ...Field) {
+func (l *zapLogger) log(level zapcore.Level, msg string, fields ...interface{}) {
 	// Convert our Fields to zap.Fields
 	zapFields := make([]zap.Field, 0, len(fields)+1)
 
@@ -112,9 +107,7 @@ func (l *zapLogger) log(ctx context.Context, level zapcore.Level, msg string, fi
 	zapFields = append(zapFields, zap.String("service", l.service))
 
 	// Add custom fields
-	for _, f := range fields {
-		zapFields = append(zapFields, zap.Any(f.Key, sanitize(f.Val)))
-	}
+	zapFields = append(zapFields, toZapFields(fields)...)
 
 	// Log with appropriate level
 	switch level {
@@ -164,6 +157,14 @@ func sanitize(value interface{}) interface{} {
 	}
 
 	return value
+}
+
+func toZapFields(fields ...interface{}) []zap.Field {
+	zapFields := make([]zap.Field, len(fields))
+	for i, field := range fields {
+		zapFields[i] = zap.Any(fmt.Sprintf("field_%d", i), field) // Dynamically assign field names
+	}
+	return zapFields
 }
 
 // Capture stack trace as Zap field
