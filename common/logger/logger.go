@@ -3,7 +3,6 @@ package logger
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"runtime"
 	"strings"
 
@@ -23,18 +22,18 @@ type Config struct {
 
 func NewLogger(config Config) (*zapLogger, error) {
 	encoderConfig := zapcore.EncoderConfig{
-		TimeKey:        "time",
+		TimeKey:        "timestamp",
 		LevelKey:       "level",
-		MessageKey:     "msg",
+		NameKey:        "logger",
 		CallerKey:      "caller",
+		MessageKey:     "msg",
 		StacktraceKey:  "stacktrace",
-		EncodeTime:     zapcore.ISO8601TimeEncoder,       // Human-readable time format
-		EncodeLevel:    zapcore.CapitalColorLevelEncoder, // Color for levels
-		EncodeCaller:   zapcore.ShortCallerEncoder,       // Shorten caller file path
-		EncodeDuration: zapcore.StringDurationEncoder,    // Human-readable duration
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.CapitalColorLevelEncoder,
+		EncodeTime:     zapcore.ISO8601TimeEncoder,
+		EncodeDuration: zapcore.SecondsDurationEncoder,
+		EncodeCaller:   zapcore.ShortCallerEncoder,
 	}
-
-	encoder := zapcore.NewJSONEncoder(encoderConfig)
 
 	var level zapcore.Level
 	switch config.Level {
@@ -50,17 +49,19 @@ func NewLogger(config Config) (*zapLogger, error) {
 		level = zapcore.InfoLevel
 	}
 
-	core := zapcore.NewCore(
-		encoder,
-		zapcore.AddSync(os.Stderr),
-		level,
+	cfg := zap.Config{
+		Encoding:         "console", // Switch to console encoding
+		Level:            zap.NewAtomicLevelAt(level),
+		OutputPaths:      []string{"stdout"}, // Log to console (stdout)
+		ErrorOutputPaths: []string{"stderr"}, // Error logs to stderr
+		EncoderConfig:    encoderConfig,
+	}
+	zlogger, err := cfg.Build(
+		zap.AddCallerSkip(2),
 	)
-
-	zlogger := zap.New(
-		core,
-		zap.AddCaller(),
-		zap.AddStacktrace(zapcore.ErrorLevel),
-	)
+	if err != nil {
+		return nil, err
+	}
 
 	return &zapLogger{
 		logger:  zlogger,
@@ -105,7 +106,7 @@ func (l *zapLogger) log(level zapcore.Level, msg string, fields ...interface{}) 
 	zapFields = append(zapFields, zap.String("service", l.service))
 
 	// Add custom fields
-	zapFields = append(zapFields, toZapFields(fields)...)
+	zapFields = append(zapFields, toZapFields(fields...)...)
 
 	// Log with appropriate level
 	switch level {
@@ -160,6 +161,8 @@ func sanitize(value interface{}) interface{} {
 // Helper to convert variadic fields to Zap fields
 func toZapFields(fields ...interface{}) []zap.Field {
 	zapFields := make([]zap.Field, 0, len(fields)/2)
+	fmt.Println(fields, len(fields))
+
 	if len(fields)%2 != 0 {
 		// Log a warning if there is an odd number of parameters
 		zapFields = append(zapFields, zap.String("error", "invalid key-value format: missing value for last key"))
