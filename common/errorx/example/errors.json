@@ -1,0 +1,8 @@
+{
+  "104001": "Incorrect password",
+  "104002": "Invalid JWT token",
+  "104003": "Token has expired",
+  "104041": "User does not exist",
+  "10500": "An unexpected error occurred",
+  "105002": "test new error"
+}
