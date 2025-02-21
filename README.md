@@ -185,6 +185,44 @@ The common packages are organized in the `common` directory and include:
 
     ```
 
+### Token Package
+- Secure token management using PASETO (Platform-Agnostic Security Tokens)
+- Asymmetric key-based token generation and validation
+- Built-in claims management (subject, user ID, session ID)
+- Support for token expiration and issuance time
+- Separate interfaces for token generation and validation
+
+    #### Basic usage
+    ```go
+    // Initialize token manager (for auth service)
+    tokenManager, err := token.NewPasetoTokenManager(privateKey)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Generate a token
+    claims := token.TokenClaims{
+        Sub:       "user123",
+        UserId:    "user123",
+        SessionId: "sess123",
+        IssuedAt:  time.Now(),
+        ExpiresAt: time.Now().Add(24 * time.Hour),
+    }
+    tokenString, err := tokenManager.GenerateToken(claims)
+
+    // Initialize token parser (for other services)
+    tokenParser, err := token.NewPasetoTokenParser(publicKey)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Validate a token
+    claims, err := tokenParser.ParseToken(tokenString)
+    if err != nil {
+        log.Fatal(err)
+    }
+    ```
+
 ### Utils Package
 - Common utility functions and helpers
 - Shared types and constants
