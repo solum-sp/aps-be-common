@@ -167,6 +167,22 @@ The common packages are organized in the `common` directory and include:
     if err != nil {
         log.Fatal(err)
     }
+
+    mutex, err := redisClient.Lock("test_key", 5*time.Second)
+    if err != nil {
+		fmt.Println("Could not acquire lock:", err)
+		return
+	}
+	fmt.Println("Lock acquired")
+
+    // Release the lock
+	err = cache.Unlock(mutex)
+	if err != nil {
+		fmt.Println("Could not release lock:", err)
+		return
+	}
+	fmt.Println("Lock released successfully")
+
     ```
 
 ### Utils Package
