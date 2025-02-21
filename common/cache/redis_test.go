@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/go-redsync/redsync/v4"
+	"github.com/go-redsync/redsync/v4/redis/goredis/v9"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 )
@@ -16,9 +18,12 @@ func setupTestRedis(t *testing.T) (*cacheRedis, func()) {
 		Addr: mredis.Addr(),
 	})
 
+	rsync := redsync.New(goredis.NewPool(client))
+
 	cache := &cacheRedis{
 		redisClient: client,
 		service:     "test-service",
+		rsync:       rsync,
 	}
 
 	cleanup := func() {
@@ -35,6 +40,18 @@ func TestSetAndGet(t *testing.T) {
 
 	expireTime := 5 * time.Second
 	err := cache.Set("test-key", "test-value", &expireTime)
+	assert.NoError(t, err)
+
+	val, err := cache.Get("test-key")
+	assert.NoError(t, err)
+	assert.Equal(t, "test-value", val)
+}
+
+func TestSetWithoutExpireTime(t *testing.T) {
+	cache, cleanup := setupTestRedis(t)
+	defer cleanup()
+
+	err := cache.Set("test-key", "test-value", nil)
 	assert.NoError(t, err)
 
 	val, err := cache.Get("test-key")
@@ -110,4 +127,78 @@ func TestClearWithPattern(t *testing.T) {
 	val, err = cache.Get("other:key3")
 	assert.NoError(t, err)
 	assert.Equal(t, "value3", val)
+}
+
+func TestGetAll(t *testing.T) {
+	cache, cleanup := setupTestRedis(t)
+	defer cleanup()
+
+	expireTime := 5 * time.Second
+	cache.Set("key1", "value1", &expireTime)
+	cache.Set("key2", "value2", &expireTime)
+
+	keys, err := cache.GetAll()
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, []string{"test-service:key1", "test-service:key2"}, keys)
+
+	// Test with no keys
+	cache.Clear()
+	keys, err = cache.GetAll()
+	assert.NoError(t, err)
+	assert.Empty(t, keys)
+}
+
+func TestGetRedisClient(t *testing.T) {
+	cache, cleanup := setupTestRedis(t)
+	defer cleanup()
+
+	client := cache.GetClient()
+	assert.NotNil(t, client)
+}
+
+func TestClose(t *testing.T) {
+	cache, cleanup := setupTestRedis(t)
+	defer cleanup()
+
+	err := cache.Close()
+	assert.NoError(t, err)
+}
+
+func TestDistributedLock(t *testing.T) {
+	cache, cleanup := setupTestRedis(t)
+	defer cleanup()
+
+	// Test successful lock acquisition
+	mutex, err := cache.Lock("test-key", 10*time.Second)
+	assert.NoError(t, err)
+	assert.NotNil(t, mutex)
+
+	// Test concurrent lock
+	mutex2, err := cache.Lock("test-key", 10*time.Second)
+	assert.Error(t, err)
+	assert.Nil(t, mutex2)
+
+	// Test unlock
+	err = cache.Unlock(mutex)
+	assert.NoError(t, err)
+
+	// Test lock after unlock
+	mutex3, err := cache.Lock("test-key", 10*time.Second)
+	assert.NoError(t, err)
+	assert.NotNil(t, mutex3)
+
+	// Test unlock
+	err = cache.Unlock(mutex3)
+	assert.NoError(t, err)
+
+	// Test with expired TTL
+	mutex4, err := cache.Lock("test-key", 1*time.Millisecond)
+	assert.NoError(t, err)
+	assert.NotNil(t, mutex4)
+	time.Sleep(2 * time.Millisecond)
+
+	// Should be able to acquire lock after expiry
+	mutex5, err := cache.Lock("test-key", 10*time.Second)
+	assert.NoError(t, err)
+	assert.NotNil(t, mutex5)
 }
