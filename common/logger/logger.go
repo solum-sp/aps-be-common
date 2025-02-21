@@ -161,7 +161,6 @@ func sanitize(value interface{}) interface{} {
 // Helper to convert variadic fields to Zap fields
 func toZapFields(fields ...interface{}) []zap.Field {
 	zapFields := make([]zap.Field, 0, len(fields)/2)
-	fmt.Println(fields, len(fields))
 
 	if len(fields)%2 != 0 {
 		// Log a warning if there is an odd number of parameters
