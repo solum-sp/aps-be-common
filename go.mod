@@ -5,9 +5,11 @@ go 1.22.11
 toolchain go1.23.3
 
 require (
+	aidanwoods.dev/go-paseto v1.5.4
 	github.com/alicebob/miniredis/v2 v2.34.0
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/confluentinc/confluent-kafka-go/v2 v2.8.0
+	github.com/go-redsync/redsync/v4 v4.13.0
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/redis/go-redis/v9 v9.7.0
@@ -15,16 +17,16 @@ require (
 	go.opentelemetry.io/otel/trace v1.34.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.33.0
+	golang.org/x/time v0.10.0
 )
 
 require (
-	aidanwoods.dev/go-paseto v1.5.4 // indirect
 	aidanwoods.dev/go-result v0.3.1 // indirect
 	github.com/alicebob/gopher-json v0.0.0-20230218143504-906a9b012302 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/go-redsync/redsync/v4 v4.13.0 // indirect
+	github.com/golobby/container/v3 v3.3.2
 	github.com/hamba/avro/v2 v2.24.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -40,7 +42,6 @@ require (
 	go.opentelemetry.io/otel v1.34.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/time v0.10.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
