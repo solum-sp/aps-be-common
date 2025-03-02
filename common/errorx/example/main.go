@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/golobby/container/v3"
 	errorx "github.com/solum-sp/aps-be-common/common/errorx"
@@ -24,8 +25,11 @@ content in errors.json:
 */
 func init() {
 	container.Singleton(func() otherpackage.SysError {
+		
 		var errCfg otherpackage.SysError
-		err := errorx.Load(&errCfg,"errors.json")
+		errCfg.FieldToCode = make(map[string]string)
+		err := errorx.Load(&errCfg, "errors.json")
+		
 		if err != nil {
 			log.Fatalf("Failed to load error messages: %v", err)
 		}
@@ -38,8 +42,13 @@ func init() {
 
 
 func main() {
+	startTime := time.Now()
 	var sysError otherpackage.SysError
 	container.Resolve(&sysError)
 
-	fmt.Println("Error message:",sysError.ErrUserDoesNotExist)
+	fmt.Printf("Error message: %v, Error code: %v \n",sysError.ErrUserDoesNotExist,sysError.GetCode(&sysError.ErrUserDoesNotExist))
+	elapsedTime := time.Since(startTime)
+
+	// ✅ Print results
+	fmt.Printf("Execution time: %v\n", elapsedTime)
 }
