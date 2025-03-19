@@ -2,7 +2,6 @@ package cache
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/go-redsync/redsync/v4"
@@ -47,7 +46,7 @@ func NewRedisCache(config RedisConfig) (*cacheRedis, error) {
 	}, nil
 }
 
-func (r *cacheRedis) GetClient() *redis.Client {
+func (r *cacheRedis) GetRedisClient() *redis.Client {
 	return r.redisClient
 }
 
@@ -56,7 +55,7 @@ func (r *cacheRedis) Close() error {
 }
 
 func (r *cacheRedis) Set(key string, value interface{}, expireTime *time.Duration) error {
-	rKey := fmt.Sprintf("%s:%s", r.service, key)
+	rKey := key
 	if expireTime == nil {
 		err := r.redisClient.Set(context.Background(), rKey, value, 0).Err()
 		return err
@@ -66,25 +65,25 @@ func (r *cacheRedis) Set(key string, value interface{}, expireTime *time.Duratio
 }
 
 func (r *cacheRedis) Get(key string) (interface{}, error) {
-	rKey := fmt.Sprintf("%s:%s", r.service, key)
+	rKey := key
 	val, err := r.redisClient.Get(context.Background(), rKey).Result()
 	return val, err
 }
 
 func (r *cacheRedis) GetAll() ([]string, error) {
-	keys, err := r.redisClient.Keys(context.Background(), fmt.Sprintf("%s:*", r.service)).Result()
+	keys, err := r.redisClient.Keys(context.Background(), "*").Result()
 	return keys, err
 }
 
 func (r *cacheRedis) GetWithPattern(pattern string) ([]string, error) {
-	rKey := fmt.Sprintf("%s:%s", r.service, pattern)
+	rKey := pattern
 
 	keys, err := r.redisClient.Keys(context.Background(), rKey).Result()
 	return keys, err
 }
 
 func (r *cacheRedis) Delete(key string) error {
-	rKey := fmt.Sprintf("%s:%s", r.service, key)
+	rKey := key
 	err := r.redisClient.Del(context.Background(), rKey).Err()
 	return err
 }
@@ -95,7 +94,7 @@ func (r *cacheRedis) Clear() error {
 }
 
 func (r *cacheRedis) ClearWithPattern(pattern string) error {
-	rKey := fmt.Sprintf("%s:%s", r.service, pattern)
+	rKey := pattern
 
 	keys, err := r.redisClient.Keys(context.Background(), rKey).Result()
 	if err != nil {
@@ -112,7 +111,7 @@ func (r *cacheRedis) ClearWithPattern(pattern string) error {
 
 // Distributed lock
 func (r *cacheRedis) Lock(key string, ttl time.Duration) (*redsync.Mutex, error) {
-	mutex := r.rsync.NewMutex(fmt.Sprintf("%s:%s", r.service, key), redsync.WithExpiry(ttl))
+	mutex := r.rsync.NewMutex(key, redsync.WithExpiry(ttl))
 	err := mutex.Lock()
 	if err != nil {
 		return nil, err

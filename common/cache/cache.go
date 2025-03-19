@@ -1,6 +1,10 @@
 package cache
 
-import "time"
+import (
+	"time"
+
+	"github.com/redis/go-redis/v9"
+)
 
 type ICache interface {
 	Set(key string, value interface{}, expireTime *time.Duration) error
@@ -10,4 +14,5 @@ type ICache interface {
 	Delete(key string) error
 	Clear() error
 	ClearWithPattern(pattern string) error
+	GetRedisClient() *redis.Client
 }

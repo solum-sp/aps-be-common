@@ -152,7 +152,7 @@ func TestGetRedisClient(t *testing.T) {
 	cache, cleanup := setupTestRedis(t)
 	defer cleanup()
 
-	client := cache.GetClient()
+	client := cache.GetRedisClient()
 	assert.NotNil(t, client)
 }
 
