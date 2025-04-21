@@ -1,7 +1,9 @@
 package token
 
 import (
+	"encoding/json"
 	"fmt"
+	"time"
 
 	"aidanwoods.dev/go-paseto"
 )
@@ -36,6 +38,71 @@ func (m *PasetoTokenManager) GenerateToken(data TokenClaims) (string, error) {
 	// Sign the token with the private key
 	signed := token.V4Sign(m.privateKey, nil)
 	return signed, nil
+}
+
+func (m *PasetoTokenManager) GenerateCustomToken(data any, expireTime time.Time) (string, error) {
+	// Serialize the custom data to JSON
+	dataBytes, err := json.Marshal(data)
+	if err != nil {
+		return "", fmt.Errorf("failed to serialize custom data: %w", err)
+	}
+
+	// Create a new PASETO token
+	token := paseto.NewToken()
+
+	// Set standard claims
+	token.SetIssuedAt(time.Now())
+	token.SetExpiration(expireTime)
+
+	// Store the serialized data in a claim named "data"
+	token.Set("data", string(dataBytes))
+
+	// Sign the token with the private key
+	signed := token.V4Sign(m.privateKey, nil)
+	return signed, nil
+}
+
+// ValidateCustomToken with normalization for roles slice
+func (m *PasetoTokenManager) ValidateCustomToken(token string) (any, error) {
+	// Create a new parser
+	parser := paseto.NewParser()
+
+	// Parse and verify the token with the public key
+	parsedToken, err := parser.ParseV4Public(m.publicKey, token, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse custom token: %w", err)
+	}
+
+	// Extract the "data" claim
+	var dataStr string
+	if err := parsedToken.Get("data", &dataStr); err != nil {
+		return nil, fmt.Errorf("failed to get custom data: %w", err)
+	}
+
+	// Deserialize the JSON data
+	var data map[string]interface{}
+	if err := json.Unmarshal([]byte(dataStr), &data); err != nil {
+		return nil, fmt.Errorf("failed to deserialize custom data: %w", err)
+	}
+
+	// Normalize the "roles" field if it exists
+	if roles, ok := data["roles"]; ok {
+		rolesSlice, ok := roles.([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("roles field is not a slice")
+		}
+		stringRoles := make([]string, len(rolesSlice))
+		for i, role := range rolesSlice {
+			strRole, ok := role.(string)
+			if !ok {
+				return nil, fmt.Errorf("role at index %d is not a string", i)
+			}
+			stringRoles[i] = strRole
+		}
+		data["roles"] = stringRoles
+	}
+
+	return data, nil
 }
 
 func (m *PasetoTokenManager) ValidateToken(t string) (*TokenClaims, error) {

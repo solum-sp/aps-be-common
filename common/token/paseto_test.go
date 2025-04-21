@@ -318,3 +318,143 @@ func TestPasetoTokenParser_ParseToken(t *testing.T) {
 		})
 	}
 }
+
+// TestPasetoTokenSvc_GenerateCustomToken tests the GenerateCustomToken function.
+func TestPasetoTokenSvc_GenerateCustomToken(t *testing.T) {
+	service := setupTestManager(t)
+
+	tests := []struct {
+		name       string
+		data       any
+		expireTime time.Time
+		wantErr    bool
+	}{
+		{
+			name: "Valid custom data",
+			data: map[string]interface{}{
+				"userId": "12345",
+				"roles":  []string{"admin", "user"},
+			},
+			expireTime: time.Now().Add(time.Hour),
+			wantErr:    false,
+		},
+		{
+			name:       "Empty custom data",
+			data:       nil,
+			expireTime: time.Now().Add(time.Hour),
+			wantErr:    false, // nil data is valid (serializes to "null")
+		},
+		{
+			name:       "Unserializable data",
+			data:       func() {}, // Functions are not JSON-serializable
+			expireTime: time.Now().Add(time.Hour),
+			wantErr:    true,
+		},
+		{
+			name: "Expiration in the past",
+			data: map[string]interface{}{
+				"userId": "12345",
+			},
+			expireTime: time.Now().Add(-1 * time.Hour),
+			wantErr:    false, // Generation should succeed; expiration checked during validation
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			token, err := service.GenerateCustomToken(tt.data, tt.expireTime)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Empty(t, token)
+			} else {
+				assert.NoError(t, err)
+				assert.NotEmpty(t, token)
+			}
+		})
+	}
+}
+
+// TestPasetoTokenSvc_ValidateCustomToken tests the ValidateCustomToken function.
+func TestPasetoTokenSvc_ValidateCustomToken(t *testing.T) {
+	service := setupTestManager(t)
+
+	validData := map[string]interface{}{
+		"userId": "12345",
+		"roles":  []string{"admin", "user"},
+	}
+	validExpireTime := time.Now().Add(time.Hour)
+	validToken, err := service.GenerateCustomToken(validData, validExpireTime)
+	require.NoError(t, err)
+
+	expiredData := map[string]interface{}{
+		"userId": "67890",
+	}
+	expiredExpireTime := time.Now().Add(-1 * time.Hour)
+	expiredToken, err := service.GenerateCustomToken(expiredData, expiredExpireTime)
+	require.NoError(t, err)
+
+	// Create a token with invalid data claim (manually manipulate token for testing)
+	invalidDataToken := createTokenWithInvalidData(t, service)
+
+	tests := []struct {
+		name     string
+		token    string
+		wantErr  bool
+		wantData any
+	}{
+		{
+			name:     "Valid token",
+			token:    validToken,
+			wantErr:  false,
+			wantData: validData,
+		},
+		{
+			name:    "Expired token",
+			token:   expiredToken,
+			wantErr: true,
+		},
+		{
+			name:    "Invalid token",
+			token:   "invalid-token",
+			wantErr: true,
+		},
+		{
+			name:    "Empty token",
+			token:   "",
+			wantErr: true,
+		},
+		{
+			name:    "Token with invalid data claim",
+			token:   invalidDataToken,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := service.ValidateCustomToken(tt.token)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, data)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, data)
+				// Compare the deserialized data with the expected data
+				assert.Equal(t, tt.wantData, data)
+			}
+		})
+	}
+}
+
+// createTokenWithInvalidData creates a token with a corrupted "data" claim for testing.
+func createTokenWithInvalidData(t *testing.T, service *PasetoTokenManager) string {
+	token := paseto.NewToken()
+	token.SetIssuedAt(time.Now())
+	token.SetExpiration(time.Now().Add(time.Hour))
+	// Set invalid JSON in the "data" claim
+	token.Set("data", "{invalid-json")
+
+	// Sign the token with the private key
+	signed := token.V4Sign(service.privateKey, nil)
+	return signed
+}
