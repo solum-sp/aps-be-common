@@ -34,6 +34,8 @@ func (m *PasetoTokenManager) GenerateToken(data TokenClaims) (string, error) {
 	token.SetSubject(data.Sub)
 	token.Set("userId", data.UserId)
 	token.Set("sessionId", data.SessionId)
+	token.Set("isAdmin", data.IsSuperAdmin)
+	token.Set("customClaims", data.CustomClaims)
 
 	// Sign the token with the private key
 	signed := token.V4Sign(m.privateKey, nil)
@@ -196,6 +198,20 @@ func parseToClaims(token *paseto.Token) (*TokenClaims, error) {
 	}
 
 	claims.ExpiresAt = expiresAt
+
+	var isAdmin bool
+	if err := token.Get("isAdmin", &isAdmin); err != nil {
+		return nil, fmt.Errorf("failed to get isAdmin: %w", err)
+	}
+
+	claims.IsSuperAdmin = isAdmin
+
+	var customClaims map[string]interface{}
+	if err := token.Get("customClaims", &customClaims); err != nil {
+		return nil, fmt.Errorf("failed to get customClaims: %w", err)
+	}
+
+	claims.CustomClaims = customClaims
 
 	return claims, nil
 }

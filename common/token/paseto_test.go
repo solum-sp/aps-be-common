@@ -85,10 +85,14 @@ func TestPasetoTokenSvc_GenerateToken(t *testing.T) {
 		{
 			name: "Valid claims",
 			claims: TokenClaims{
-				Sub:       "user123",
-				UserId:    "456",
-				IssuedAt:  time.Now(),
-				ExpiresAt: time.Now().Add(time.Hour),
+				Sub:          "user123",
+				UserId:       "456",
+				IssuedAt:     time.Now(),
+				ExpiresAt:    time.Now().Add(time.Hour),
+				IsSuperAdmin: true,
+				CustomClaims: map[string]interface{}{
+					"custom": "claim",
+				},
 			},
 			wantErr: false,
 		},
@@ -214,10 +218,14 @@ func TestTokenValidationAcrossInstances(t *testing.T) {
 	require.NoError(t, err)
 
 	claims := TokenClaims{
-		Sub:       "user123",
-		UserId:    "456",
-		IssuedAt:  time.Now(),
-		ExpiresAt: time.Now().Add(time.Hour),
+		Sub:          "user123",
+		UserId:       "456",
+		IssuedAt:     time.Now(),
+		ExpiresAt:    time.Now().Add(time.Hour),
+		IsSuperAdmin: true,
+		CustomClaims: map[string]interface{}{
+			"custom": "claim",
+		},
 	}
 
 	// Generate token with first service
@@ -230,6 +238,7 @@ func TestTokenValidationAcrossInstances(t *testing.T) {
 	assert.NotNil(t, validatedClaims)
 	assert.Equal(t, claims.Sub, validatedClaims.Sub)
 	assert.Equal(t, claims.UserId, validatedClaims.UserId)
+	assert.Equal(t, claims.IsSuperAdmin, validatedClaims.IsSuperAdmin)
 }
 
 // Parse token
