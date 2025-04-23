@@ -24,6 +24,7 @@ type TestConfig struct {
 		Feature string `env:"CUSTOM_FEATURE" envDefault:"test-feature"`
 		Flag    bool   `env:"CUSTOM_FLAG" envDefault:"true"`
 	}
+	TestValue string `env:"TEST_VALUE"`
 }
 
 func createTempEnvFile(t *testing.T, filename string, content string) string {
@@ -201,4 +202,69 @@ CUSTOM_FEATURE=new-feature
 			}
 		})
 	}
+}
+
+func TestLoadEnv_NonExistentFile(t *testing.T) {
+	// Create a temporary directory for test
+	tempDir := t.TempDir()
+
+	// Test with non-existent .env file
+	err := LoadEnv(tempDir)
+	assert.NoError(t, err, "LoadEnv should not return error when .env file doesn't exist")
+}
+
+func TestNewAppConfig_NonExistentFile(t *testing.T) {
+	// Create a temporary directory for test
+	tempDir := t.TempDir()
+
+	// Set a test environment variable
+	os.Setenv("TEST_VALUE", "from_env")
+	defer os.Unsetenv("TEST_VALUE")
+
+	// Test config
+	cfg := &TestConfig{}
+	err := NewAppConfig(tempDir, cfg)
+
+	assert.NoError(t, err, "NewAppConfig should not return error when .env file doesn't exist")
+	assert.Equal(t, "from_env", cfg.TestValue, "Should load value from environment variables")
+}
+
+func TestLoadEnv_WithExistingFile(t *testing.T) {
+	// Create a temporary directory for test
+	tempDir := t.TempDir()
+
+	// Create a test .env file
+	envContent := "TEST_VALUE=from_file"
+	envPath := filepath.Join(tempDir, ".env")
+	err := os.WriteFile(envPath, []byte(envContent), 0644)
+	assert.NoError(t, err)
+
+	// Test config
+	cfg := &TestConfig{}
+	err = NewAppConfig(tempDir, cfg)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "from_file", cfg.TestValue, "Should load value from .env file")
+}
+
+func TestLoadEnv_OverrideFromEnv(t *testing.T) {
+	// Create a temporary directory for test
+	tempDir := t.TempDir()
+
+	// Create a test .env file
+	envContent := "TEST_VALUE=from_file"
+	envPath := filepath.Join(tempDir, ".env")
+	err := os.WriteFile(envPath, []byte(envContent), 0644)
+	assert.NoError(t, err)
+
+	// Set environment variable to override
+	os.Setenv("TEST_VALUE", "from_env")
+	defer os.Unsetenv("TEST_VALUE")
+
+	// Test config
+	cfg := &TestConfig{}
+	err = NewAppConfig(tempDir, cfg)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "from_env", cfg.TestValue, "Environment variable should override .env file value")
 }

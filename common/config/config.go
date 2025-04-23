@@ -40,7 +40,11 @@ func LoadEnv(path string) error {
 	envPath := path + "/" + envFileName
 	if envFileName != "" {
 		log.Printf("Loading config from file:%s\n", envPath)
-		_ = godotenv.Load(envPath)
+		if _, err := os.Stat(envPath); err == nil {
+			_ = godotenv.Load(envPath)
+		} else {
+			log.Printf("Config file not found: %s\n", envPath)
+		}
 	}
 	log.Printf("Loading config from environment\n")
 	_ = godotenv.Load()
