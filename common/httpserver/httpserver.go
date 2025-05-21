@@ -7,8 +7,7 @@ import (
 	"github.com/solum-sp/aps-be-common/common/logger"
 
 	"github.com/gin-gonic/gin"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
+
 )
 
 type HttpServerConfig struct {
@@ -75,7 +74,6 @@ func (s *HTTPServer) Initialize() *HTTPServer {
 }
 
 func (s *HTTPServer) SetupRouter() {
-	s.ServeSwagger()
 	for version, regs := range s.registrars {
 		var group *gin.RouterGroup
 		if version == "root" {
@@ -87,10 +85,6 @@ func (s *HTTPServer) SetupRouter() {
 			reg.Register(s, group)
 		}
 	}
-}
-
-func (s *HTTPServer) ServeSwagger() {
-	s.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 }
 
 
