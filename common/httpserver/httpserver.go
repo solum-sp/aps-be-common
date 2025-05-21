@@ -31,17 +31,7 @@ type RouteConfig struct {
 	Middlewares []gin.HandlerFunc
 }
 
-var methods = struct{
-	GET string
-	POST string
-	PUT string
-	DELETE string
-}{
-	GET: "GET",
-	POST: "POST",
-	PUT: "PUT",
-	DELETE: "DELETE",
-}
+
 var DefaultConfig = HttpServerConfig{
 	Host: "localhost",
 	Port: 8080,
@@ -104,7 +94,7 @@ func (s *HTTPServer) ServeSwagger() {
 }
 
 
-func (s *HTTPServer) addRouteV2(group *gin.RouterGroup, cfg RouteConfig) {
+func (s *HTTPServer) AddRouteV2(group *gin.RouterGroup, cfg RouteConfig) {
 	handler := cfg.Handler
 	if len(cfg.Middlewares) > 0 {
 		handler = chainMiddlewares(cfg.Handler, cfg.Middlewares...)
