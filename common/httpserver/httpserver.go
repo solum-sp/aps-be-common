@@ -78,9 +78,9 @@ func (s *HTTPServer) SetupRouter() {
 		var group *gin.RouterGroup
 		if version == "root" {
 			group = s.router.Group("")
-			} else {
-				group = s.router.Group("/api/" + version) // just /v1, /v2
-			}
+		} else {
+			group = s.router.Group("/api/" + version) // just /v1, /v2
+		}
 		for _, reg := range regs {
 			reg.Register(s, group)
 		}
