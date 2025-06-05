@@ -223,6 +223,192 @@ The common packages are organized in the `common` directory and include:
     }
     ```
 
+### Cron Package
+- Production-ready cron job scheduling and management
+- Job status tracking with execution metadata
+- Thread-safe operations with proper concurrency handling
+- Configuration-based job registry with dependency injection
+- Real-time monitoring and logging integration
+- Support for both cron expressions and time intervals
+- Built-in job examples for common use cases
+
+    #### Key Features
+    - **Job Management**: Add, remove, and monitor cron jobs with metadata tracking
+    - **Status Monitoring**: Real-time job status (idle, running, success, failed)
+    - **Execution Tracking**: Run count, failure count, execution time, and duration
+    - **Registry System**: Factory pattern for job creation and configuration management
+    - **Thread Safety**: Full concurrent access protection with proper mutex handling
+    - **Flexible Scheduling**: Support for cron expressions and time.Duration intervals
+
+    #### Basic Usage
+    ```go
+    import "github.com/solum-sp/aps-be-common/common/cron"
+
+    // Create cron manager
+    manager := cron.NewCronManager(logger)
+
+    // Create a simple function-based job
+    job := cron.NewFuncJob("heartbeat", func(ctx context.Context) error {
+        logger.Info("System heartbeat check")
+        return nil
+    })
+
+    // Add job with cron schedule (every 5 minutes)
+    err := manager.AddJob("*/5 * * * *", job)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Start the cron manager
+    manager.Start()
+    defer manager.Stop()
+    ```
+
+    #### Advanced Usage with Registry
+    ```go
+    // Create job factory
+    factory := cron.NewExampleJobFactory(logger)
+
+    // Setup complete cron system with registry
+    registry := cron.NewJobRegistryBuilder(logger).
+        WithJob("database_cleanup", factory.CreateDatabaseCleanupJob(30)).
+        WithJob("cache_warmup", factory.CreateCacheWarmupJob([]string{"users", "products"})).
+        WithJob("health_check", factory.CreateHealthCheckJob([]string{"http://api.example.com/health"})).
+        WithConfig("database_cleanup", "0 2 * * *", true).       // Daily at 2 AM
+        WithConfig("cache_warmup", "*/15 * * * *", true).        // Every 15 minutes
+        WithConfig("health_check", "*/5 * * * *", true).         // Every 5 minutes
+        Build()
+
+    // Register all jobs with manager
+    manager := cron.NewCronManager(logger)
+    err := registry.RegisterJobsWithManager(manager)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    manager.Start()
+    ```
+
+    #### Custom Job Implementation
+    ```go
+    // Implement the Job interface
+    type MyCustomJob struct {
+        *cron.BaseJob
+        database Database
+        config   Config
+    }
+
+    func NewMyCustomJob(db Database, cfg Config, logger logger.ILogger) *MyCustomJob {
+        return &MyCustomJob{
+            BaseJob:  cron.NewBaseJob("my_custom_job"),
+            database: db,
+            config:   cfg,
+        }
+    }
+
+    func (j *MyCustomJob) Run(ctx context.Context) error {
+        // Your business logic here
+        records, err := j.database.GetExpiredRecords(ctx)
+        if err != nil {
+            return fmt.Errorf("failed to get expired records: %w", err)
+        }
+
+        for _, record := range records {
+            if err := j.database.DeleteRecord(ctx, record.ID); err != nil {
+                return fmt.Errorf("failed to delete record %s: %w", record.ID, err)
+            }
+        }
+
+        return nil
+    }
+    ```
+
+    #### Job Monitoring and Status
+    ```go
+    // Get information about a specific job
+    info, exists := manager.GetJobInfo("database_cleanup")
+    if exists {
+        fmt.Printf("Job: %s\n", info.Name)
+        fmt.Printf("Status: %s\n", info.Status)
+        fmt.Printf("Last Run: %v\n", info.LastRun)
+        fmt.Printf("Run Count: %d\n", info.RunCount)
+        fmt.Printf("Fail Count: %d\n", info.FailCount)
+        fmt.Printf("Last Duration: %v\n", info.LastDuration)
+    }
+
+    // Get all running jobs
+    runningJobs := manager.GetRunningJobs()
+    fmt.Printf("Currently running: %v\n", runningJobs)
+
+    // Get complete status of all jobs
+    allJobs := manager.GetAllJobsInfo()
+    for name, info := range allJobs {
+        fmt.Printf("%s: %s (runs: %d, fails: %d)\n", 
+            name, info.Status, info.RunCount, info.FailCount)
+    }
+    ```
+
+    #### Configuration File Support
+    ```go
+    // Load job configurations from JSON file
+    registry := cron.NewJobRegistryBuilder(logger).
+        WithConfigFile("./config/cron_jobs.json").
+        Build()
+    ```
+
+    Example `cron_jobs.json`:
+    ```json
+    [
+        {
+            "name": "database_cleanup",
+            "schedule": "0 2 * * *",
+            "enabled": true
+        },
+        {
+            "name": "cache_warmup",
+            "schedule": "*/15 * * * *",
+            "enabled": true
+        },
+        {
+            "name": "health_check",
+            "schedule": "*/5 * * * *",
+            "enabled": false
+        }
+    ]
+    ```
+
+    #### Built-in Job Examples
+    The package includes several ready-to-use job implementations:
+
+    - **DatabaseCleanupJob**: Cleanup old database records with configurable retention
+    - **CacheWarmupJob**: Preload cache keys for better performance
+    - **HealthCheckJob**: Monitor system health endpoints
+    - **ReportGenerationJob**: Generate periodic reports
+
+    ```go
+    // Use built-in jobs
+    dbCleanup := cron.NewDatabaseCleanupJob(30, logger) // 30 days retention
+    cacheWarmup := cron.NewCacheWarmupJob([]string{"users", "products"}, logger)
+    healthCheck := cron.NewHealthCheckJob([]string{"http://api.example.com/health"}, logger)
+
+    manager.AddJob("0 2 * * *", dbCleanup)     // Daily at 2 AM
+    manager.AddJob("*/15 * * * *", cacheWarmup) // Every 15 minutes
+    manager.AddJob("*/5 * * * *", healthCheck)  // Every 5 minutes
+    ```
+
+    #### Error Handling and Recovery
+    ```go
+    // Jobs automatically capture and log errors
+    // Failed jobs are marked with status and error message
+    info, _ := manager.GetJobInfo("failing_job")
+    if info.Status == cron.JobStatusFailed {
+        fmt.Printf("Job failed with error: %s\n", info.LastError)
+    }
+
+    // Job execution is isolated - one failure doesn't affect others
+    // Manager continues running even if individual jobs fail
+    ```
+
 ### Utils Package
 - Common utility functions and helpers
 - Shared types and constants
